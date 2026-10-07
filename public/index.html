@@ -148,6 +148,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
   </section>
 
   <div class="filters">
+    <div class="group" id="fSrc"><span>Origen</span></div>
     <div class="group" id="fDay"><span>Día</span></div>
     <input type="search" id="q" placeholder="Buscar por nombre o correo" aria-label="Buscar por nombre o correo">
     <div class="spacer"></div>
@@ -305,7 +306,14 @@ function buildDayChips(){
   daysWithData().forEach(k=>fd.append(chip(dayLbl(k),false,()=>{toggle(state.days,k);render()})));
 }
 const daysWithData=()=>[...new Set(state.data.map(r=>r.day))].sort();
+function buildSrcChips(){
+  const fs=document.getElementById("fSrc");
+  fs.append(chip("Todos",true,()=>{state.srcs.clear();render()}));
+  Object.keys(SRC).forEach(k=>{const b=chip(SRC[k],false,()=>{state.srcs.clear();state.srcs.add(k);render()});
+    b.insertAdjacentHTML("afterbegin",`<span class="dot" style="background:${SRCCOL[k]};display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:0"></span>`);fs.append(b)});
+}
 function buildStatic(){
+  buildSrcChips();
   const fv=document.getElementById("fView");
   fv.append(chip("Tablero",true,()=>{state.view="board";render()}));
   fv.append(chip("Lista",false,()=>{state.view="list";render()}));
@@ -314,6 +322,8 @@ function buildStatic(){
 function syncChips(){
   const DAYS=daysWithData(); const fd=[...document.querySelectorAll("#fDay .chip")];
   if(fd.length){fd[0].setAttribute("aria-pressed",state.days.size===0);fd.slice(1).forEach((b,i)=>b.setAttribute("aria-pressed",state.days.has(DAYS[i])))}
+  const fsc=[...document.querySelectorAll("#fSrc .chip")]; const sk=Object.keys(SRC);
+  if(fsc.length){fsc[0].setAttribute("aria-pressed",state.srcs.size===0);fsc.slice(1).forEach((b,i)=>b.setAttribute("aria-pressed",state.srcs.has(sk[i])))}
   const fv=[...document.querySelectorAll("#fView .chip")];
   fv[0].setAttribute("aria-pressed",state.view==="board");fv[1].setAttribute("aria-pressed",state.view==="list");
 }
