@@ -63,3 +63,4 @@ El tablero muestra qué falló. Los casos más comunes:
 
 Cambiá `DASHBOARD_PASSWORD` en Netlify y volvé a hacer el deploy (paso 4.4).
 Quien tenga la contraseña vieja va a tener que ingresar la nueva.
+Actualizado: webinar y triaje.
