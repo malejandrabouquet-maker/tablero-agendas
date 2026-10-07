@@ -14,17 +14,17 @@
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
   --bg:#F3F4F7; --panel:#FFFFFF; --ink:#1C2230; --muted:#667085; --line:#E3E6EC; --chip:#EEF0F4;
-  --c-sin:#6B7280; --c-rev:#4B5563; --c-abi:#E5940B; --c-con:#16A34A; --c-lla:#9B4DEB; --c-per:#D93636;
+  --c-sin:#6B7280; --c-rev:#4B5563; --c-tri:#6366F1; --c-pn:#DC2626; --c-pi:#9D174D; --c-ca:#78716C; --c-abi:#E5940B; --c-con:#16A34A; --c-lla:#9B4DEB; --c-per:#D93636;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#181B22; --panel:#21252E; --ink:#E9ECF2; --muted:#9AA3B2; --line:#323846; --chip:#2B303B;
-    --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
+    --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
   }
 }
 :root[data-theme="dark"]{
   --bg:#181B22; --panel:#21252E; --ink:#E9ECF2; --muted:#9AA3B2; --line:#323846; --chip:#2B303B;
-  --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
+  --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -158,7 +158,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
   <div class="list hidden" id="list"></div>
   </div>
 
-  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
+  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
 </div>
 
 <script>
@@ -177,7 +177,10 @@ const STAGE_CAT = n => {
 const STAGE_COL = n => {
   const s = norm(n);
   if (s.startsWith("nutricion")||/^(asistencia|no asistio|sena|venta)/.test(s)) return "#16A34A";
-  if (s.startsWith("descualificado")||s.startsWith("cancelado")) return "#C62828";
+  if (s.startsWith("descualificado")&&s.includes("nicho")) return "#DC2626";
+  if (s.startsWith("descualificado")) return "#9D174D";
+  if (s.startsWith("cancelado")) return "#78716C";
+  if (s.startsWith("triaje")) return "#6366F1";
   if (s.startsWith("no responde")) return "#DB2777";
   if (s.startsWith("conversando")||s.startsWith("formulario")) return "#C77C05";
   if (s.startsWith("interesados")) return "#6366F1";
@@ -185,13 +188,16 @@ const STAGE_COL = n => {
 };
 const CATS = [
   {k:"sin",n:"Sin trabajar",d:"Nuevo Lead, Confirmar nicho"},
-  {k:"abi",n:"Abiertas",d:"Triaje, Conversando, Formulario enviado, No responde, Interesados sin dinero"},
+  {k:"abi",n:"Abiertas",d:"Conversando, Formulario enviado, No responde, Interesados sin dinero"},
+  {k:"tri",n:"Triaje",d:"Antes de definir si pasan a llamada"},
   {k:"con",n:"Confirmadas",d:"Nutrición - confirmación (y las que ya pasaron a los closers)"},
-  {k:"per",n:"Perdidas",d:"Descualificado por inversión o nicho, Cancelado - Setter"},
+  {k:"pn",n:"Descalificadas por nicho",d:"Descualificado por nicho"},
+  {k:"pi",n:"Descalificadas por inversión",d:"Descualificado por inversión"},
+  {k:"ca",n:"Canceladas",d:"Cancelado - Setter"},
   {k:"rev",n:"Para revisar",d:"No se encontraron en GHL o el match es dudoso"}
 ];
-const SRC = {A:"Ads",B:"Bio"};
-const SRCCOL = {A:"#2563EB",B:"#0D9488"};
+const SRC = {A:"Ads",B:"Bio",W:"Webinar"};
+const SRCCOL = {A:"#2563EB",B:"#0D9488",W:"#9333EA"};
 
 /* ---------- utilidades ---------- */
 function norm(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}

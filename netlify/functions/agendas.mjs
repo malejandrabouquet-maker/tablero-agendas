@@ -49,7 +49,8 @@ function messageText(m) {
   for (const a of m.attachments || []) t += "\n" + (a.text || "") + "\n" + (a.fallback || "");
   return t;
 }
-const TITLE_RE = /T[ií]tulo:?\*?:?\s*Sesi[oó]n Asesor[ií]a Founders(?:\s+(IG|S))?\s*-\s*([^\n*]+)/i;
+// Ads: "Sesión Asesoría Founders - X" · Bio: "... Founders IG - X" o "... Founders S- X" · Webinar: "Auditoría Founders - X"
+const TITLE_RE = /T[ií]tulo:?\*?:?\s*(?:(Sesi[oó]n Asesor[ií]a)|(Auditor[ií]a)) Founders(?:\s+(IG|S))?\s*-\s*([^\n*]+)/i;
 
 async function slackAgendas(from, to) {
   const oldest = dayStart(from) / 1000, latest = (dayStart(to) + DAY) / 1000;
@@ -70,8 +71,8 @@ async function slackAgendas(from, to) {
       if (!mt) continue; // ignora pruebas y mensajes que no son agendas
       const ms = Math.round(parseFloat(m.ts) * 1000);
       out.push({
-        name: mt[2].replace(/\s+/g, " ").trim(),
-        src: mt[1] ? "B" : "A",
+        name: mt[4].replace(/\s+/g, " ").trim(),
+        src: mt[2] ? "W" : mt[3] ? "B" : "A",
         day: dayKey(ms), time: hhmm(ms), ts: ms,
       });
     }
@@ -127,7 +128,10 @@ async function searchOpps(stages, { q, sinceMs, max = 1500 }) {
 function stageCat(n) {
   const s = norm(n);
   if (s.startsWith("nutricion") || /^(asistencia|no asistio|sena|venta)/.test(s)) return "con";
-  if (s.startsWith("descualificado") || s.startsWith("cancelado")) return "per";
+  if (s.startsWith("descualificado") && s.includes("nicho")) return "pn";
+  if (s.startsWith("descualificado")) return "pi";
+  if (s.startsWith("cancelado")) return "ca";
+  if (s.startsWith("triaje")) return "tri";
   if (s.startsWith("nuevo lead") || s.startsWith("lead confirmar")) return "sin";
   return "abi";
 }
