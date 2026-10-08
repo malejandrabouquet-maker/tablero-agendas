@@ -75,8 +75,8 @@ input[type=search]:focus-visible{outline:2px solid var(--c-abi);outline-offset:1
 
 /* Tablero */
 .board{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px;align-items:start}
-.col{background:var(--chip);border-radius:12px;padding:10px;min-height:120px}
-.col h2{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;margin:2px 4px 10px}
+.col{background:var(--chip);border-radius:12px;padding:10px;min-height:120px;max-height:min(78vh,820px);overflow-y:auto;overscroll-behavior:contain;padding-top:0}
+.col h2{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;margin:2px 4px 10px;position:sticky;top:0;z-index:1;background:var(--chip);margin:0 -10px 10px;padding:12px 14px 6px}
 .col h2 .count{margin-left:auto;font-weight:700;color:var(--muted)}
 .col h2 .dot{width:10px;height:10px}
 .col .stages{color:var(--muted);font-size:12.5px;margin:-6px 4px 10px;line-height:1.3}
@@ -116,6 +116,10 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
 .steps li.done::before{content:"✓ ";color:var(--c-con);font-weight:700}
 .steps li.now::before{content:"… ";font-weight:700}
 .why{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.3}
+.board::-webkit-scrollbar{height:12px}
+.board::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+.col::-webkit-scrollbar{width:8px}
+.col::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
 </style>
 </head>
 <body>
@@ -192,6 +196,7 @@ const STAGE_COL = n => {
   return "#4B5563";
 };
 const CATS = [
+  {k:"form",n:"Descalificados por el form",d:"Webinar: no pasaron el filtro del form (Seguimientos) o recibieron low ticket"},
   {k:"sin",n:"Sin trabajar",d:"Nuevo Lead, Confirmar nicho"},
   {k:"abi",n:"Abiertas",d:"Conversando, Formulario enviado, No responde, Interesados sin dinero"},
   {k:"tri",n:"Triaje",d:"Antes de definir si pasan a llamada"},
@@ -199,7 +204,6 @@ const CATS = [
   {k:"pn",n:"Descalificadas por nicho",d:"Descualificado por nicho"},
   {k:"pi",n:"Descalificadas por inversión",d:"Descualificado por inversión"},
   {k:"ca",n:"Canceladas",d:"Cancelado - Setter"},
-  {k:"form",n:"Descalificados por el form",d:"Webinar: no pasaron el filtro del form (Seguimientos) o recibieron low ticket"},
   {k:"de",n:"Datos erróneos",d:"Webinar: pasaron el filtro pero no se les pudo enviar nada"},
   {k:"rev",n:"Para revisar",d:"No se encontraron en GHL o el match es dudoso"}
 ];
