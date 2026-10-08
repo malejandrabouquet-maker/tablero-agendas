@@ -14,17 +14,17 @@
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
   --bg:#F3F4F7; --panel:#FFFFFF; --ink:#1C2230; --muted:#667085; --line:#E3E6EC; --chip:#EEF0F4;
-  --c-sin:#6B7280; --c-rev:#4B5563; --c-tri:#6366F1; --c-pn:#DC2626; --c-pi:#9D174D; --c-ca:#78716C; --c-abi:#E5940B; --c-con:#16A34A; --c-lla:#9B4DEB; --c-per:#D93636;
+  --c-sin:#6B7280; --c-rev:#4B5563; --c-tri:#6366F1; --c-pn:#DC2626; --c-pi:#9D174D; --c-ca:#78716C; --c-form:#B45309; --c-de:#475569; --c-abi:#E5940B; --c-con:#16A34A; --c-lla:#9B4DEB; --c-per:#D93636;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#181B22; --panel:#21252E; --ink:#E9ECF2; --muted:#9AA3B2; --line:#323846; --chip:#2B303B;
-    --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
+    --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-form:#F59E0B; --c-de:#94A3B8; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
   }
 }
 :root[data-theme="dark"]{
   --bg:#181B22; --panel:#21252E; --ink:#E9ECF2; --muted:#9AA3B2; --line:#323846; --chip:#2B303B;
-  --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
+  --c-sin:#9CA3AF; --c-rev:#8A93A3; --c-tri:#8B8DF7; --c-pn:#F05252; --c-pi:#E0628E; --c-ca:#A8A29E; --c-form:#F59E0B; --c-de:#94A3B8; --c-abi:#F5A524; --c-con:#2FBF62; --c-lla:#B57BF5; --c-per:#F05252;
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -95,6 +95,8 @@ input[type=search]:focus-visible{outline:2px solid var(--c-abi);outline-offset:1
 .list td,.list th{text-align:left}
 .list td .tag.st{display:inline-block}
 .hidden{display:none!important}
+.nav{display:inline-block;margin-top:6px;font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;border-bottom:2px solid var(--c-abi)}
+.nav:hover{color:var(--c-abi)}
 footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
 @media (max-width:700px){.wrap{padding:18px 12px 36px}.total b{font-size:36px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -159,7 +161,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
   <div class="list hidden" id="list"></div>
   </div>
 
-  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
+  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar. Las de webinar sin oportunidad en Agendas se buscan en el pipeline WEBINAR y en Seguimientos (descalificados por el form). Quien agendó varias veces se cuenta una sola vez. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
 </div>
 
 <script>
@@ -182,6 +184,8 @@ const STAGE_COL = n => {
   if (s.startsWith("descualificado")) return "#9D174D";
   if (s.startsWith("cancelado")) return "#78716C";
   if (s.startsWith("triaje")) return "#6366F1";
+  if (s.startsWith("descalificado por el form")||s.startsWith("low ticket")) return "#B45309";
+  if (s.startsWith("datos erroneos")) return "#475569";
   if (s.startsWith("no responde")) return "#DB2777";
   if (s.startsWith("conversando")||s.startsWith("formulario")) return "#C77C05";
   if (s.startsWith("interesados")) return "#6366F1";
@@ -195,6 +199,8 @@ const CATS = [
   {k:"pn",n:"Descalificadas por nicho",d:"Descualificado por nicho"},
   {k:"pi",n:"Descalificadas por inversión",d:"Descualificado por inversión"},
   {k:"ca",n:"Canceladas",d:"Cancelado - Setter"},
+  {k:"form",n:"Descalificados por el form",d:"Webinar: no pasaron el filtro del form (Seguimientos) o recibieron low ticket"},
+  {k:"de",n:"Datos erróneos",d:"Webinar: pasaron el filtro pero no se les pudo enviar nada"},
   {k:"rev",n:"Para revisar",d:"No se encontraron en GHL o el match es dudoso"}
 ];
 const SRC = {A:"Ads",B:"Bio",W:"Webinar"};
