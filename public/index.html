@@ -364,7 +364,7 @@ function render(){
     board.append(col);
   });
   list.innerHTML=`<table><thead><tr><th>Nombre</th><th>Correo</th><th>Agendó</th><th>Origen</th><th>Etapa</th><th>Estado</th></tr></thead><tbody>${
-    rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.email?esc(r.email):"<span style='color:var(--muted)'>–</span>"}</td><td>${dayLbl(r.day)}</td><td>${SRC[r.src]}</td><td><span class="tag st" style="background:${r.cat==="rev"?"#4B5563":STAGE_COL(r.stage)}">${esc(r.stage)}</span></td><td>${CATS.find(c=>c.k===r.cat).n}</td></tr>`).join("")
+    rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.email?esc(r.email):"<span style='color:var(--muted)'>–</span>"}</td><td>${dayLbl(r.day)}</td><td>${SRC[r.src]}</td><td><span class="tag st" style="background:${r.cat==="rev"?"#4B5563":STAGE_COL(r.stage)}">${esc(r.stage)}</span></td><td>${(CATS.find(c=>c.k===r.cat)||{n:r.cat}).n}</td></tr>`).join("")
   }</tbody></table>${rows.length?"":`<div class="empty" style="padding:16px">No hay agendas con estos filtros.</div>`}`;
 }
 function drawBar(barId,legId,items,sel,total){
