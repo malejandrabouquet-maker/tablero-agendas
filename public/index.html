@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tablero de agendas</title>
+<title>Auditoría del camino del lead</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -97,6 +97,7 @@ input[type=search]:focus-visible{outline:2px solid var(--c-abi);outline-offset:1
 .hidden{display:none!important}
 .nav{display:inline-block;margin-top:6px;font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;border-bottom:2px solid var(--c-abi)}
 .nav:hover{color:var(--c-abi)}
+.period{font-size:clamp(17px,2vw,22px);font-weight:600;color:var(--muted);margin-top:6px}
 footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
 @media (max-width:700px){.wrap{padding:18px 12px 36px}.total b{font-size:36px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -120,16 +121,30 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
 .board::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
 .col::-webkit-scrollbar{width:8px}
 .col::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px}
+
+.cols{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;padding-bottom:6px;align-items:start}
+.funnel{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.fbox{background:var(--chip);border-radius:10px;padding:12px 14px}
+.fbox .l{color:var(--muted);font-size:12.5px;line-height:1.25}
+.fbox .n{font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-top:4px}
+.fbox .p{color:var(--muted);font-size:12px}
+.exc{border:1px solid var(--line);border-radius:10px;margin-top:8px;background:var(--panel)}
+.exc summary{cursor:pointer;padding:10px 14px;display:flex;gap:10px;align-items:center;font-weight:600;font-size:14.5px}
+.exc summary .n{margin-left:auto;font-variant-numeric:tabular-nums}
+.exc .d{color:var(--muted);font-size:12.5px;font-weight:400}
+.exc table{min-width:900px}
+.exc td,.exc th{text-align:left;white-space:normal}
+.warn{color:var(--c-per);font-size:12px;margin-top:6px;line-height:1.3}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1 id="title">Tablero de agendas</h1>
-    <div class="snap" id="snap">Agendas de #comercial-agenda con su etapa en GoHighLevel.</div>
+    <div><h1 id="title">AUDITORÍA DEL CAMINO DEL LEAD</h1><div class="snap" id="period" style="font-size:16px;font-weight:600;margin-top:6px"></div></div>
+    <div class="snap" id="snap">Formularios de Ads y Bio → etiqueta del flujo → cita → aviso en Slack → pipelines.</div>
   </header>
 
-  <div class="range" id="range">
+  <div class="range">
     <div class="group" id="fRange"></div>
     <span id="custom" class="hidden" style="display:inline-flex;gap:6px;align-items:center">
       <input type="date" id="dFrom" aria-label="Desde"> <span>a</span> <input type="date" id="dTo" aria-label="Hasta">
@@ -142,249 +157,327 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
   <div id="status" class="status" role="status" aria-live="polite">Cargando…</div>
 
   <div id="content" class="hidden">
-  <section class="summary" aria-label="Resumen">
-    <div class="total"><b class="num" id="tot">0</b><span id="totLbl">agendas</span></div>
-    <div class="sub0">Estado</div>
-    <div class="bar" id="bar" role="group" aria-label="Distribución por estado"></div>
-    <div class="legend" id="legend"></div>
-    <div class="sub">Por dónde entró</div>
-    <div class="bar" id="barSrc" role="group" aria-label="Distribución por origen"></div>
-    <div class="legend" id="legendSrc"></div>
-    <div class="days"><table id="daysTbl"></table></div>
-  </section>
+    <div class="filters" style="margin-top:0">
+      <div class="group" id="fSrc"><span>Origen</span></div>
+      <input type="search" id="q" placeholder="Buscar por nombre o correo" aria-label="Buscar por nombre o correo">
+    </div>
 
-  <div class="filters">
-    <div class="group" id="fSrc"><span>Origen</span></div>
-    <div class="group" id="fDay"><span>Día</span></div>
-    <input type="search" id="q" placeholder="Buscar por nombre o correo" aria-label="Buscar por nombre o correo">
-    <div class="spacer"></div>
-    <div class="group" id="fView"></div>
+    <section class="summary" aria-label="Qué hacer hoy">
+      <div class="sub0" style="font-size:18px">Qué hacer hoy</div>
+      <div class="funnel" id="todoSum"></div>
+      <div id="todo"></div>
+    </section>
+
+    <section class="summary" aria-label="Embudo">
+      <div class="sub0">El camino, de punta a punta</div>
+      <div class="funnel" id="funnel"></div>
+      <div class="sub">Dónde está cada lead hoy</div>
+      <div class="bar" id="bar" role="group" aria-label="Distribución por columna"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="summary" aria-label="Clasificación del flujo">
+      <div class="sub0">¿El flujo "Autorespondedor VSL" clasificó bien?</div>
+      <div id="clasif"></div>
+    </section>
+
+    <section class="summary" aria-label="Cómo clasificó el flujo en la práctica">
+      <div class="sub0">Cómo clasificó el flujo en la práctica</div>
+      <div class="snap">Para cada respuesta del form, qué etiqueta terminó poniendo el flujo. Solo cuenta a quienes no están en Agendas y tienen etiqueta. Sirve para ver la regla real.</div>
+      <div id="practica"></div>
+    </section>
+
+    <section class="summary" aria-label="Excepciones">
+      <div class="sub0">Leads perdidos o con problemas (pendientes)</div>
+      <div class="snap">Solo lo que todavía no se resolvió. Cuando el lead pasa a trabajarse, sale de acá y queda en el histórico.</div>
+      <div id="excs"></div>
+    </section>
+
+    <section class="summary" aria-label="Histórico de problemas resueltos">
+      <div class="sub0">Histórico de problemas resueltos</div>
+      <div class="snap">Problemas que pasaron y ya se resolvieron (el lead ya se está trabajando), o que son del sistema y no de cada lead. No generan alertas.</div>
+      <div id="hist"></div>
+    </section>
+
+    <div class="sub" style="margin-top:6px">Tablero</div>
+    <div class="cols" id="board"></div>
   </div>
 
-  <div class="board" id="board"></div>
-  <div class="list hidden" id="list"></div>
-  </div>
-
-  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar. Las de webinar sin oportunidad en Agendas se buscan en el pipeline WEBINAR y en Seguimientos (descalificados por el form). Quien agendó varias veces se cuenta una sola vez. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
+  <footer>Población: personas que completaron "Datos Cita VSL - Founders" (Ads) o "Datos Cita VSL - Founders - IG" (Bio) en el período; si alguien lo completó varias veces, cuenta la última. Etiqueta: la que puso el flujo (no_cualifica, puede_cualificar, cualifica), leída desde sus oportunidades en GHL. Regla del flujo: no cualifica si el modelo es Comercio o Clínicas, o si respondió "No, no puedo invertir en mi…"; posible si es Consultoría o Agencia; el resto cualifica. Agendó = tiene una cita en el calendario de GHL creada después del form. Quien está en Agendas sin etiqueta pasó el filtro (la etiqueta se quita al pasarlo a Agendas) y se ubica por su etapa ahí. Llegó a Slack = hay un aviso en #comercial-agenda con su nombre. Confirmadas = en Nutrición - confirmación (las que siguieron con los closers también cuentan como confirmadas).</footer>
 </div>
 
 <script>
-/* ---------- configuración ---------- */
-const MAX_DAYS = 31;
+const MAX_DAYS=31;
+const COLS=[
+ {k:"nc",n:"No cualificaron",d:"El flujo los descalificó (Seguimientos)",c:"#B45309"},
+ {k:"po",n:"Posibles",d:"Etiqueta puede_cualificar, sin agenda",c:"#A16207"},
+ {k:"cn",n:"Cualificaron, no agendaron",d:"Pasaron el form y no tomaron cita",c:"#DB2777"},
+ {k:"st",n:"Agendaron, sin trabajar",d:"Agendas: Nuevo Lead o Confirmar nicho",c:"#6B7280"},
+ {k:"ep",n:"Agendaron o en proceso",d:"Conversando, No responde, Triaje… (Agendas o Leads Prospección)",c:"#2563EB"},
+ {k:"co",n:"Confirmadas",d:"Nutrición - confirmación",c:"#16A34A"},
+ {k:"pe",n:"Perdidas tras agendar",d:"Descalificadas o canceladas en Agendas",c:"#78716C"}];
+const EXC=[
+ {k:"slack",n:"Agendó pero no llegó el aviso a Slack",d:"Tiene cita activa en GHL y no hay aviso en #comercial-agenda. Nadie se enteró.",g:1},
+ {k:"maldesc",n:"Respondió bien pero quedó descalificado",d:"Sus respuestas cualifican, pero tiene no_cualifica y no está en Agendas. Puede ser un lead bueno que se está perdiendo.",g:1},
+ {k:"cita",n:"El filtro no canceló la cita",d:"Tiene etiqueta no_cualifica pero su cita sigue activa.",g:1},
+ {k:"sintag",n:"Sin etiqueta del flujo",d:"No tiene etiqueta y no está en Agendas: puede que el flujo no haya corrido.",g:2},
+ {k:"hueco",n:"Dijo que no puede invertir y el flujo lo dejó pasar",d:"Respondió \"No, ahora mismo no puedo\" u \"Hoy no cuento con dinero\", opción que la regla del flujo no descalifica.",g:2}];
+const PROB={maldesc:"Respondió bien pero quedó descalificado",slack:"No llegó el aviso a Slack",cita:"El filtro no canceló la cita",sintag:"Sin etiqueta del flujo",tag:"Etiqueta distinta a la regla del flujo",hueco:"Dijo que no puede invertir y pasó"};
+const SRC={A:"Ads",B:"Bio"}; const SRCCOL={A:"#2563EB",B:"#0D9488"};
+const TAGLBL={no_cualifica:"no_cualifica",puede_cualificar:"puede_cualificar",cualifica:"cualifica"};
 
-const STAGE_CAT = n => {
-  const s = norm(n);
-  if (s.startsWith("nutricion")) return "con";
-  if (/^(asistencia|no asistio|sena|venta)/.test(s)) return "con";
-  if (s.startsWith("descualificado") || s.startsWith("cancelado")) return "per";
-  if (s.startsWith("nuevo lead") || s.startsWith("lead confirmar")) return "sin";
-  if (/^(triaje|conversando|formulario enviado|no responde|interesados sin dinero)/.test(s)) return "abi";
-  return "abi";
-};
-const STAGE_COL = n => {
-  const s = norm(n);
-  if (s.startsWith("nutricion")||/^(asistencia|no asistio|sena|venta)/.test(s)) return "#16A34A";
-  if (s.startsWith("descualificado")&&s.includes("nicho")) return "#DC2626";
-  if (s.startsWith("descualificado")) return "#9D174D";
-  if (s.startsWith("cancelado")) return "#78716C";
-  if (s.startsWith("triaje")) return "#6366F1";
-  if (s.startsWith("descalificado por el form")||s.startsWith("low ticket")) return "#B45309";
-  if (s.startsWith("datos erroneos")) return "#475569";
-  if (s.startsWith("no responde")) return "#DB2777";
-  if (s.startsWith("conversando")||s.startsWith("formulario")) return "#C77C05";
-  if (s.startsWith("interesados")) return "#6366F1";
-  return "#4B5563";
-};
-const CATS = [
-  {k:"form",n:"Descalificados por el form",d:"Webinar: no pasaron el filtro del form (Seguimientos) o recibieron low ticket"},
-  {k:"sin",n:"Sin trabajar",d:"Nuevo Lead, Confirmar nicho"},
-  {k:"abi",n:"Abiertas",d:"Conversando, Formulario enviado, No responde, Interesados sin dinero"},
-  {k:"tri",n:"Triaje",d:"Antes de definir si pasan a llamada"},
-  {k:"con",n:"Confirmadas",d:"Nutrición - confirmación (y las que ya pasaron a los closers)"},
-  {k:"pn",n:"Descalificadas por nicho",d:"Descualificado por nicho"},
-  {k:"pi",n:"Descalificadas por inversión",d:"Descualificado por inversión"},
-  {k:"ca",n:"Canceladas",d:"Cancelado - Setter"},
-  {k:"de",n:"Datos erróneos",d:"Webinar: pasaron el filtro pero no se les pudo enviar nada"},
-  {k:"rev",n:"Para revisar",d:"No se encontraron en GHL o el match es dudoso"}
-];
-const SRC = {A:"Ads",B:"Bio",W:"Webinar"};
-const SRCCOL = {A:"#2563EB",B:"#0D9488",W:"#9333EA"};
-
-/* ---------- utilidades ---------- */
 function norm(s){return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
 function toks(s){return norm(s).split(" ").filter(w=>w.length>1)}
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
-function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 const tz="America/Argentina/Buenos_Aires";
 const keyFmt=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"});
-const lblFmt=new Intl.DateTimeFormat("es-AR",{timeZone:tz,weekday:"short",day:"numeric",month:"numeric"});
+const lblFmt=new Intl.DateTimeFormat("es-AR",{timeZone:tz,day:"numeric",month:"numeric"});
 const longFmt=new Intl.DateTimeFormat("es-AR",{timeZone:tz,day:"numeric",month:"long"});
+const dtFmt=new Intl.DateTimeFormat("es-AR",{timeZone:tz,day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
 const hmFmt=new Intl.DateTimeFormat("es-AR",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false});
 const todayKey=()=>keyFmt.format(new Date());
 const keyToDate=k=>new Date(k+"T12:00:00-03:00");
 const addDays=(k,n)=>keyFmt.format(new Date(keyToDate(k).getTime()+n*864e5));
-const dayStartSec=k=>Math.floor(new Date(k+"T00:00:00-03:00").getTime()/1000);
-const dayLbl=k=>cap(lblFmt.format(keyToDate(k)));
-function daysBetween(a,b){const out=[];let k=a;while(k<=b&&out.length<=MAX_DAYS){out.push(k);k=addDays(k,1)}return out}
+const dayStart=k=>new Date(k+"T00:00:00-03:00").getTime();
+const DAY=864e5;
 
-/* ---------- estado ---------- */
-const state={preset:"7d",from:null,to:null,days:new Set(),cats:new Set(),srcs:new Set(),q:"",view:"board",data:[],range:[]};
-
-
-/* ---------- carga desde la API ---------- */
-const PASS_KEY="tablero_agendas_pass";
+const state={preset:"30d",from:null,to:null,src:"all",q:"",leads:[]};
+const PASS_KEY="auditoria_leads_pass";
 function getPass(){try{return localStorage.getItem(PASS_KEY)||""}catch(e){return ""}}
 function setPass(v){try{v?localStorage.setItem(PASS_KEY,v):localStorage.removeItem(PASS_KEY)}catch(e){}}
-function setStatus(html,err){const s=document.getElementById("status");s.innerHTML=html;s.className="status"+(err?" err":"");s.classList.remove("hidden")}
+function setStatus(h,err){const s=document.getElementById("status");s.innerHTML=h;s.className="status"+(err?" err":"");s.classList.remove("hidden")}
 function askPass(msg){
   document.getElementById("content").classList.add("hidden");
-  setStatus(`<b>Ingresá la contraseña del tablero</b>${msg?`<div style="color:var(--c-per);margin:4px 0">${esc(msg)}</div>`:""}
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input type="password" id="pw" autocomplete="current-password" aria-label="Contraseña" style="border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 12px;font:inherit;min-width:220px">
-    <button class="btn" type="button" id="pwGo">Entrar</button></div>`,!!msg);
+  setStatus(`<b>Ingresá la contraseña</b>${msg?`<div style="color:var(--c-per);margin:4px 0">${esc(msg)}</div>`:""}<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input type="password" id="pw" aria-label="Contraseña" style="border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:8px 12px;font:inherit;min-width:220px"><button class="btn" type="button" id="pwGo">Entrar</button></div>`,!!msg);
   const go=()=>{const v=document.getElementById("pw").value.trim();if(v){setPass(v);load()}};
   document.getElementById("pwGo").addEventListener("click",go);
   document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")go()});
-  document.getElementById("pw").focus();
 }
+class AuthErr extends Error{}
+async function api(params){
+  const r=await fetch("/api/auditoria?"+new URLSearchParams(params),{headers:{"x-pass":getPass()}});
+  let j={};try{j=await r.json()}catch(e){}
+  if(r.status===401) throw new AuthErr();
+  if(!r.ok) throw new Error(j.message||("Error "+r.status));
+  return j;
+}
+async function pool(tasks,n){const out=new Array(tasks.length);let i=0;async function w(){while(i<tasks.length){const k=i++;out[k]=await tasks[k]()}}await Promise.all(Array.from({length:n},w));return out}
+
+/* ---------- reglas del flujo ---------- */
+// Busca la respuesta que empieza con una de las opciones del form, como palabra completa
+// (así "No, ahora mismo…" coincide, pero un mail como "noelia@…" o un apellido como "Signorello" no).
+function answer(list,prefixes){for(const a of list){const n=norm(a);for(const p of prefixes){const q=norm(p);if(n===q||n.startsWith(q+" ")) return a}}return ""}
+const MODELOS=["Salud o bienestar","Comercio","Coaching","Enseñanza","Marca personal","Agencia","Consultoría","Clínicas"];
+const INVS=["No, ","Si,","Sí,","Hoy no cuento","Tengo "];
+const INGS=["Todavía no facturo","Menos de $","Entre $","Más de $"];
+function regla(l){
+  const m=norm(l.modelo), v=norm(l.inv);
+  if(m.startsWith("comercio")||m.startsWith("clinicas")||v.startsWith("no no puedo invertir en mi")) return "no_cualifica";
+  if(m.startsWith("consultoria")||m.startsWith("agencia")) return "puede_cualificar";
+  return "cualifica";
+}
+const saidNo=l=>{const v=norm(l.inv);return v.startsWith("no ahora mismo no puedo")||v.startsWith("hoy no cuento con dinero")};
+
+/* ---------- carga y cruce ---------- */
 async function load(fresh){
-  if(running) return;
-  const pass=getPass(); if(!pass){askPass();return}
-  running=true; document.getElementById("refresh").disabled=true;
-  const range=currentRange(); state.range=range;
-  setStatus("<b>Actualizando…</b>Leyendo las agendas de Slack y buscando sus etapas en GoHighLevel. Tarda unos segundos.");
+  if(!getPass()){askPass();return}
+  const range=currentRange(); const from=range[0], to=range[range.length-1];
+  document.getElementById("refresh").disabled=true;
+  const step=(t)=>setStatus(`<b>Auditando…</b>${t}. Puede tardar un minuto: son muchos datos.`);
   try{
-    const qs=new URLSearchParams({from:range[0],to:range[range.length-1]}); if(fresh) qs.set("fresh","1");
-    const r=await fetch("/api/agendas?"+qs,{headers:{"x-pass":pass}});
-    let j={}; try{j=await r.json()}catch(e){}
-    if(r.status===401){setPass("");running=false;document.getElementById("refresh").disabled=false;askPass("Contraseña incorrecta.");return}
-    if(!r.ok) throw new Error(j.message||("Error "+r.status));
-    state.data=(j.rows||[]).map((x,idx)=>({...x,idx}));
-    if(!state.data.length){
-      document.getElementById("content").classList.add("hidden");
-      setStatus(`<b>No hay agendas en este período.</b>No llegó ninguna notificación a #comercial-agenda entre el ${longFmt.format(keyToDate(range[0]))} y el ${longFmt.format(keyToDate(range[range.length-1]))}.`);
-      return;
-    }
-    state.days.clear();
-    document.getElementById("snap").textContent=`Agendas de #comercial-agenda con su etapa en GoHighLevel. Actualizado hoy a las ${hmFmt.format(new Date(j.updatedAt||Date.now()))}.`;
+    step("Leyendo formularios, pipelines y calendarios");
+    const meta=await api({paso:"meta"});
+    if(!meta.forms.A&&!meta.forms.B) throw new Error("No encontré los formularios \"Datos Cita VSL - Founders\" ni \"… - IG\" en GHL.");
+    const P=n=>meta.pipelines.find(p=>norm(p.name).includes(n));
+    const pAg=P("agendas"), pLp=P("prospeccion"), pSeg=P("seguimientos");
+    const pipes=[pAg,pLp,pSeg].filter(Boolean);
+    const since=dayStart(from)-60*DAY;
+    const tasks=[];
+    for(const k of ["A","B"]) if(meta.forms[k]) tasks.push(()=>api({paso:"form",formId:meta.forms[k].id,from,to}).then(r=>({t:"form",src:k,...r})));
+    tasks.push(()=>api({paso:"slack",from,to}).then(r=>({t:"slack",...r})).catch(e=>({t:"slack",error:e.message,messages:[]})));
+    for(const c of meta.calendars) tasks.push(()=>api({paso:"citas",calendarId:c.id,from,to}).then(r=>({t:"citas",...r})).catch(e=>({t:"citas",error:e.message,events:[]})));
+    for(const p of pipes) for(const s of p.stages) tasks.push(()=>api({paso:"opps",pipelineId:p.id,stageId:s.id,since}).then(r=>({t:"opps",...r})));
+    let done=0; const wrapped=tasks.map(f=>async()=>{const r=await f();done++;step(`Consultando GHL y Slack (${done} de ${tasks.length})`);return r});
+    const res=await pool(wrapped,3);
+    const subs=res.filter(r=>r.t==="form").flatMap(r=>r.submissions.map(s=>({...s,src:r.src})));
+    const msgs=res.filter(r=>r.t==="slack").flatMap(r=>r.messages);
+    const slackErr=res.find(r=>r.t==="slack"&&r.error)?.error;
+    const citaErr=res.find(r=>r.t==="citas"&&r.error)?.error;
+    const events=res.filter(r=>r.t==="citas").flatMap(r=>r.events);
+    const ops=res.filter(r=>r.t==="opps").flatMap(r=>r.opps);
+    const stageName={},pipeName={};
+    for(const p of meta.pipelines){pipeName[p.id]=p.name;for(const s of p.stages) stageName[s.id]=s.name}
+
+    // una fila por persona: la última vez que completó el form
+    const byKey=new Map();
+    for(const s of subs.sort((a,b)=>a.at-b.at)){const k=s.cid||norm(s.email)||norm(s.name);if(k) byKey.set(k,s)}
+    const opsBy=new Map(), evBy=new Map();
+    for(const o of ops){if(!o.cid)continue;(opsBy.get(o.cid)||opsBy.set(o.cid,[]).get(o.cid)).push(o)}
+    for(const e of events){if(!e.cid)continue;(evBy.get(e.cid)||evBy.set(e.cid,[]).get(e.cid)).push(e)}
+    // Contactos que no tienen oportunidad en los pipelines: su etiqueta se lee del contacto.
+    const TAGS3=["no_cualifica","puede_cualificar","cualifica"];
+    const agId=pAg&&pAg.id;
+    const needTag=c=>{const m=opsBy.get(c)||[];if(m.some(o=>o.pipelineId===agId))return false;return !m.some(o=>o.tags.some(t=>TAGS3.includes(norm(t).replace(/ /g,"_"))))};
+    const lonely=[...new Set([...byKey.values()].map(s=>s.cid).filter(c=>c&&needTag(c)))];
+    const ctags={};
+    const batches=[];for(let i=0;i<lonely.length;i+=25) batches.push(lonely.slice(i,i+25));
+    let bd=0;
+    await pool(batches.map(b=>async()=>{const r=await api({paso:"contactos",ids:b.join(",")}).catch(()=>({tags:{}}));Object.assign(ctags,r.tags);bd++;step(`Leyendo etiquetas de contactos (${bd} de ${batches.length})`)}),3);
+    const msgT=msgs.map(m=>({...m,tk:new Set(toks(m.title))}));
+    const nameIn=(name,m)=>{const t=toks(name);if(!t.length) return false;return t.length===1?m.tk.has(t[0]):m.tk.has(t[0])&&m.tk.has(t[t.length-1])};
+
+    state.leads=[...byKey.values()].map(s=>{
+      const l={name:s.name||"(sin nombre)",email:s.email,src:s.src,at:s.at,cid:s.cid,
+        modelo:answer(s.answers,MODELOS),inv:answer(s.answers,INVS),ing:answer(s.answers,INGS),exc:[]};
+      l.expected=regla(l);
+      const mine=(opsBy.get(s.cid)||[]);
+      const tags=new Set([...mine.flatMap(o=>o.tags),...(ctags[s.cid]||[])].map(x=>norm(x).replace(/ /g,"_")));
+      l.tag=tags.has("no_cualifica")?"no_cualifica":tags.has("puede_cualificar")?"puede_cualificar":tags.has("cualifica")?"cualifica":"";
+      const latest=(pid)=>mine.filter(o=>o.pipelineId===pid).sort((a,b)=>b.changed-a.changed)[0];
+      const ag=pAg&&latest(pAg.id), lp=pLp&&latest(pLp.id), sg=pSeg&&latest(pSeg.id);
+      l.ag=ag?stageName[ag.stageId]||"":""; l.lp=lp?stageName[lp.stageId]||"":""; l.sg=sg?stageName[sg.stageId]||"":"";
+      const ev=(evBy.get(s.cid)||[]).filter(e=>(e.added||e.start)>=s.at-DAY).sort((a,b)=>b.added-a.added);
+      l.cita=ev[0]||null; l.citaActiva=ev.some(e=>!/cancel|invalid/.test(norm(e.status)));
+      const ref=l.cita?(l.cita.added||l.cita.start):s.at;
+      l.slack=msgT.some(m=>nameIn(l.name,m)&&m.at>=Math.min(ref,s.at)-3600e3&&m.at<=ref+3*DAY);
+      l.agendo=!!l.cita||l.slack;
+      // Si está en Agendas, pasó el filtro del form (cualificaba o era posible) y manda su etapa ahí.
+      // Su etiqueta actual puede venir de una decisión posterior (por ejemplo no_cualifica al descalificarlo en la llamada).
+      l.inAg=!!ag; l.passed=l.inAg&&!l.tag;
+      const tagEff=l.inAg?(l.expected==="no_cualifica"?"cualifica":l.expected):(l.tag||l.expected);
+      l.tagEff=tagEff;
+      // columna
+      const a=norm(l.ag);
+      if(!ag&&tagEff==="no_cualifica") l.col="nc";
+      else if(l.agendo||ag){
+        if(!ag) l.col="st";
+        else if(a.startsWith("nutricion")||/^(asistencia|no asistio|sena|venta)/.test(a)) l.col="co";
+        else if(a.startsWith("descualificado")||a.startsWith("cancelado")) l.col="pe";
+        else if(a.startsWith("nuevo lead")||a.startsWith("lead confirmar")) l.col="st";
+        else l.col="ep";
+      } else if(lp&&!/nuevo|new/.test(norm(l.lp))) l.col="ep";
+      else l.col=tagEff==="puede_cualificar"?"po":"cn";
+      // excepciones
+      if(l.citaActiva&&!l.slack&&tagEff!=="no_cualifica") l.exc.push("slack");
+      if(!ag&&l.tag==="no_cualifica"&&l.citaActiva) l.exc.push("cita");
+      // Respuestas que cualifican (o posibles) pero quedó como no_cualifica. Se excluye a quien dijo que no puede invertir.
+      if(!ag&&l.tag==="no_cualifica"&&l.expected!=="no_cualifica"&&!saidNo(l)) l.exc.push("maldesc");
+      if(!l.tag&&!ag) l.exc.push("sintag");
+      if(!ag&&l.tag&&l.tag!==l.expected&&!l.exc.includes("maldesc")) l.exc.push("tag");
+      if(saidNo(l)&&tagEff!=="no_cualifica") l.exc.push("hueco");
+      l.where=ag?"Agendas · "+l.ag:sg?"Seguimientos · "+l.sg:lp?"Leads (Prospección) · "+l.lp:"Sin oportunidad";
+      // ---- conclusión: qué pasó y qué hacer ----
+      const cuando=l.cita?dtFmt.format(new Date(l.cita.start)):"";
+      const lpWorked=lp&&!/^(lead|nuevo|new)/.test(norm(l.lp));
+      const fresh=Date.now()-s.at<=48*3600e3;
+      const nivel=tagEff==="puede_cualificar"?"es posible":"cualifica";
+      const worked=!!ag||lpWorked;
+      if(l.exc.includes("slack")&&worked){l.prio="none";l.que=`Agendó para el ${cuando}. No llegó el aviso a Slack, pero ya se está trabajando (${l.where}).`;l.hacer="Seguir el proceso normal. La falla del aviso queda en \"Para arreglar en el sistema\"."}
+      else if(l.exc.includes("slack")){l.prio="urg";l.que=`Agendó para el ${cuando} y no llegó el aviso a Slack: nadie se enteró.`;l.hacer="Contactarlo hoy y confirmar la cita."}
+      else if(l.exc.includes("maldesc")&&!worked){l.prio="urg";l.que=`Sus respuestas ${l.expected==="puede_cualificar"?"lo dejan como posible":"cualifican"} (${[l.modelo,l.inv].filter(Boolean).join(" · ")}), pero quedó como no_cualifica (${l.where}).`;l.hacer="Revisarlo en GHL y contactarlo para reagendar."}
+      else if(l.exc.includes("cita")){l.prio="urg";l.que=`El form lo descalificó, pero su cita del ${cuando} sigue activa.`;l.hacer="Cancelar la cita o hablar con la persona."}
+      else if(l.exc.includes("hueco")&&l.citaActiva&&!ag){l.prio="hoy";l.que=`Dijo que no puede invertir, el flujo lo dejó pasar y tiene cita el ${cuando}.`;l.hacer="Revisar si puede invertir antes de la llamada."}
+      else if(ag){l.prio="none";l.que=`Agendó y está en tu proceso: ${l.ag.replace(/\s*\|\s*S$/,"")}.`;l.hacer="Seguir el proceso normal."}
+      else if(tagEff==="no_cualifica"){l.prio="none";l.que="El form lo descalificó y quedó en Seguimientos.";l.hacer="Nada."}
+      else if(l.agendo){l.prio="none";l.que=`Agendó${cuando?" para el "+cuando:""}${l.slack?" y llegó el aviso a Slack":""}${l.citaActiva?"":", pero la cita está cancelada"}.`;l.hacer=l.citaActiva?"Esperar la llamada.":"Escribirle para reagendar."; if(!l.citaActiva) l.prio=fresh?"hoy":"rec"}
+      else if(lpWorked){l.prio="none";l.que=`Pasó el filtro (${nivel}) y ya se está trabajando en Leads (Prospección): ${l.lp}.`;l.hacer="Seguir el proceso normal."}
+      else {l.prio=fresh?"hoy":"rec";l.que=`Pasó el filtro (${nivel}) pero no agendó.`;l.hacer=fresh?"Escribirle hoy para que agende.":"Mandarle un mensaje de reactivación para que agende."}
+      // Alertas solo lo pendiente; lo resuelto pasa al histórico.
+      // Mover al lead de etapa es manual (solo se hace después de hablar con él), así que "trabajado" = resuelto.
+      const probs=l.exc;
+      l.exc=probs.filter(k=>k!=="tag"&&!(worked&&["slack","cita","hueco","sintag","maldesc"].includes(k)));
+      l.hist=probs.filter(k=>!l.exc.includes(k));
+      const dias=Math.floor((Date.now()-s.at)/DAY);
+      l.desde=dias<=0?"completó el form hoy":dias===1?"completó el form ayer":`completó el form hace ${dias} días`;
+      return l;
+    });
+    state.warn=[slackErr&&("Slack: "+slackErr),citaErr&&("Calendarios: "+citaErr),!pLp&&"No encontré el pipeline Leads (Prospección).",!pSeg&&"No encontré el pipeline Seguimientos."].filter(Boolean);
+    document.getElementById("snap").textContent=`Formularios de Ads y Bio → etiqueta → cita → Slack → pipelines. Actualizado hoy a las ${hmFmt.format(new Date())}.`;
     document.getElementById("status").classList.add("hidden");
     document.getElementById("content").classList.remove("hidden");
-    buildDayChips(); render();
+    render();
   }catch(e){
-    setStatus(`<b>No se pudo actualizar el tablero.</b>${esc(e.message||"Error de conexión.")} Probá con Actualizar en unos segundos.`,true);
-  }finally{running=false;document.getElementById("refresh").disabled=false}
+    if(e instanceof AuthErr){setPass("");askPass("Contraseña incorrecta.");return}
+    setStatus(`<b>No se pudo hacer la auditoría.</b>${esc(e.message||"Error de conexión.")} Probá con Actualizar en unos segundos.`,true);
+  }finally{document.getElementById("refresh").disabled=false}
 }
 
-/* ---------- rango ---------- */
-function currentRange(){
-  const t=todayKey();
-  let a,b=t;
-  if(state.preset==="hoy") a=t;
-  else if(state.preset==="semana"){const dow=(keyToDate(t).getUTCDay()+6)%7;a=addDays(t,-dow)}
-  else if(state.preset==="custom"){a=state.from;b=state.to}
-  else a=addDays(t,-6);
-  const days=daysBetween(a,b);
-  const ttl=a===b?`Agendas del ${longFmt.format(keyToDate(a))}`:`Agendas del ${longFmt.format(keyToDate(a))} al ${longFmt.format(keyToDate(b))}`;
-  document.getElementById("title").textContent=ttl; document.title=ttl;
-  return days;
-}
-function buildRange(){
-  const g=document.getElementById("fRange");
-  [["hoy","Hoy"],["7d","Últimos 7 días"],["semana","Esta semana"],["custom","Elegir fechas"]].forEach(([k,l])=>{
-    g.append(chip(l,state.preset===k,()=>{state.preset=k;syncRange();if(k!=="custom")load()}));
-  });
-  const t=todayKey(); const f=document.getElementById("dFrom"),to=document.getElementById("dTo");
-  f.value=addDays(t,-6); to.value=t; f.max=t; to.max=t;
-  document.getElementById("goCustom").addEventListener("click",()=>{
-    let a=f.value,b=to.value; if(!a||!b) return; if(a>b)[a,b]=[b,a];
-    if(daysBetween(a,b).length>MAX_DAYS){a=addDays(b,-(MAX_DAYS-1));f.value=a}
-    state.from=a;state.to=b;load();
-  });
-  document.getElementById("refresh").addEventListener("click",()=>load(true));
-}
-function syncRange(){
-  const keys=["hoy","7d","semana","custom"];
-  [...document.querySelectorAll("#fRange .chip")].forEach((b,i)=>b.setAttribute("aria-pressed",state.preset===keys[i]));
-  document.getElementById("custom").classList.toggle("hidden",state.preset!=="custom");
-}
-
-/* ---------- render ---------- */
+/* ---------- vista ---------- */
 function chip(label,pressed,on){const b=document.createElement("button");b.className="chip";b.type="button";b.textContent=label;b.setAttribute("aria-pressed",pressed?"true":"false");b.addEventListener("click",on);return b}
-function toggle(set,k){set.has(k)?set.delete(k):set.add(k)}
-function buildDayChips(){
-  const fd=document.getElementById("fDay");fd.querySelectorAll(".chip").forEach(c=>c.remove());
-  fd.append(chip("Todos",true,()=>{state.days.clear();render()}));
-  daysWithData().forEach(k=>fd.append(chip(dayLbl(k),false,()=>{toggle(state.days,k);render()})));
+function render(){
+  [...document.querySelectorAll("#fSrc .chip")].forEach((b,i)=>b.setAttribute("aria-pressed",["all","A","B"][i]===state.src));
+  const L=state.leads.filter(l=>(state.src==="all"||l.src===state.src)&&(!state.q||norm(l.name).includes(state.q)||norm(l.email).includes(state.q)));
+  const n=L.length, pct=v=>n?Math.round(v*100/n)+"%":"–";
+  const tagEff=l=>l.tagEff;
+  const f=[["Completaron el form",n],["No cualificaron",L.filter(l=>tagEff(l)==="no_cualifica").length],["Posibles",L.filter(l=>tagEff(l)==="puede_cualificar").length],["Cualificaron",L.filter(l=>tagEff(l)==="cualifica").length],["Agendaron (cita en GHL)",L.filter(l=>l.cita).length],["Llegaron a Slack",L.filter(l=>l.slack).length],["Confirmadas",L.filter(l=>l.col==="co").length]];
+  document.getElementById("funnel").innerHTML=f.map(([t,v],i)=>`<div class="fbox"><div class="l">${i?"→ ":""}${t}</div><div class="n num">${v}</div><div class="p">${i?pct(v)+" del total":"personas distintas"}</div></div>`).join("")
+    +(state.warn.length?`<div class="warn" style="grid-column:1/-1">Ojo: ${state.warn.map(esc).join(" · ")}</div>`:"");
+  const cnt=k=>L.filter(l=>l.col===k).length;
+  document.getElementById("bar").innerHTML=COLS.filter(c=>cnt(c.k)).map(c=>`<button type="button" style="flex:${cnt(c.k)};background:${c.c}" title="${esc(c.n)}: ${cnt(c.k)}">${n&&cnt(c.k)*100/n>=6?Math.round(cnt(c.k)*100/n)+"%":""}</button>`).join("");
+  document.getElementById("legend").innerHTML=COLS.map(c=>`<div class="leg" style="cursor:default"><span class="dot" style="background:${c.c}"></span><span class="n num">${cnt(c.k)}</span><span class="l">${c.n}</span></div>`).join("");
+  // qué hacer hoy
+  const P=[{k:"urg",n:"🔴 Urgente",d:"Leads que agendaron y nadie atendió, que respondieron bien y quedaron descalificados, o con una cita que no corresponde.",open:true},
+           {k:"hoy",n:"🟠 Escribir hoy",d:"Pasaron el filtro en las últimas 48 horas y no agendaron (o cancelaron).",open:true},
+           {k:"rec",n:"🟡 Recuperar",d:"Pasaron el filtro hace más de 48 horas y no agendaron.",open:false}];
+  const sys=[["maldesc","Leads que respondieron bien y quedaron como no_cualifica","Revisar en los registros de ejecución del flujo por qué rama los mandó (por ejemplo, si hay opciones nuevas del form que el flujo no reconoce)."],
+             ["slack","Avisos a Slack que no salieron","Revisar el envío del aviso a #comercial-agenda."],
+             ["hueco","\"No, ahora mismo no puedo\" pasa el filtro","Agregar esa respuesta a la condición de No Cualificados del flujo."],
+             ["sintag","Leads sin etiqueta del flujo","Mirar en los registros de ejecución del flujo si falló el paso de etiqueta."],
+             ["tag","Etiqueta distinta a la regla","Revisar las condiciones del flujo con la tabla de abajo."]].map(([k,n,h])=>({n,h,c:L.filter(l=>l.exc.includes(k)||l.hist.includes(k)).length})).filter(x=>x.c);
+  const none=L.filter(l=>l.prio==="none");
+  document.getElementById("todoSum").innerHTML=P.map(p=>`<div class="fbox"><div class="l">${p.n}</div><div class="n num">${L.filter(l=>l.prio===p.k).length}</div></div>`).join("")
+    +`<div class="fbox"><div class="l">🛠 Para arreglar en el sistema</div><div class="n num">${sys.length}</div></div><div class="fbox"><div class="l">✅ Sin acción</div><div class="n num">${none.length}</div></div>`;
+  const item=l=>`<div class="card" style="--cat:${l.prio==="urg"?"#DC2626":l.prio==="hoy"?"#E5940B":l.prio==="rec"?"#CA8A04":"#16A34A"};margin:0 0 8px">
+      <div class="nm">${esc(l.name)} <span class="tag" style="background:${SRCCOL[l.src]};color:#fff;margin-left:4px">${SRC[l.src]}</span> <span style="color:var(--muted);font-weight:400;font-size:12.5px">· ${esc(l.desde)}${l.email?" · "+esc(l.email):""}</span></div>
+      <div style="font-size:13.5px;margin-top:4px"><b>Qué pasó:</b> ${esc(l.que)}</div>
+      <div style="font-size:13.5px"><b>Qué hacer:</b> ${esc(l.hacer)}</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px"><b>Etiqueta:</b> ${esc(l.tag||(l.inAg?"sin etiqueta (en Agendas)":"sin etiqueta"))} · <b>Dónde está:</b> ${esc(l.where)}</div></div>`;
+  document.getElementById("todo").innerHTML=P.map(p=>{const it=L.filter(l=>l.prio===p.k).sort((a,b)=>b.at-a.at);return `<details class="exc" ${p.open&&it.length?"open":""}><summary><span>${p.n}<div class="d">${p.d}</div></span><span class="n">${it.length}</span></summary><div style="padding:0 14px 12px;max-height:520px;overflow-y:auto">${it.map(item).join("")||'<div class="empty">Nada por acá.</div>'}</div></details>`}).join("")
+    +`<details class="exc"><summary><span>🛠 Para arreglar en el sistema<div class="d">No se resuelven lead por lead: se arreglan una vez en GHL o en el flujo.</div></span><span class="n">${sys.length}</span></summary><div style="padding:0 14px 12px">${sys.map(x=>`<div style="margin:6px 0"><b>${esc(x.n)} (${x.c})</b><br><span style="color:var(--muted);font-size:13.5px">${esc(x.h)}</span></div>`).join("")||'<div class="empty">Nada por arreglar.</div>'}</div></details>`
+    +`<details class="exc"><summary><span>✅ Sin acción<div class="d">Descalificados por el form, en tu proceso, ya trabajándose o esperando la llamada.</div></span><span class="n">${none.length}</span></summary><div style="padding:0 14px 12px;max-height:520px;overflow-y:auto">${none.sort((a,b)=>b.at-a.at).map(item).join("")}</div></details>`;
+  // clasificación
+  const withTag=L.filter(l=>l.tag&&!l.inAg), ok=withTag.filter(l=>l.tag===l.expected).length;
+  document.getElementById("clasif").innerHTML=`<div class="legend" style="margin-top:0">
+    <div class="leg" style="cursor:default"><span class="dot" style="background:#16A34A"></span><span class="n num">${ok}</span><span class="l">fuera de Agendas, con la etiqueta que les corresponde</span></div>
+    <div class="leg" style="cursor:default"><span class="dot" style="background:#DC2626"></span><span class="n num">${withTag.length-ok}</span><span class="l">fuera de Agendas, con una etiqueta distinta a la que corresponde</span></div>
+    <div class="leg" style="cursor:default"><span class="dot" style="background:#6B7280"></span><span class="n num">${L.filter(l=>l.inAg).length}</span><span class="l">en Agendas (pasaron el filtro; manda su etapa ahí)</span></div>
+    <div class="leg" style="cursor:default"><span class="dot" style="background:#9CA3AF"></span><span class="n num">${L.filter(l=>!l.tag&&!l.passed).length}</span><span class="l">sin etiqueta y fuera de Agendas</span></div>
+    <div class="leg" style="cursor:default"><span class="dot" style="background:#B45309"></span><span class="n num">${L.filter(l=>l.exc.includes("hueco")||l.hist.includes("hueco")).length}</span><span class="l">dijeron que no pueden invertir y pasaron (hueco de la regla)</span></div></div>`;
+  // práctica
+  const base=L.filter(l=>l.tag&&!l.inAg);
+  const tbl=(title,key)=>{const vals=[...new Set(base.map(l=>l[key]||"(sin responder)"))];
+    const rows=vals.map(v=>{const g=base.filter(l=>(l[key]||"(sin responder)")===v);const c=t=>g.filter(l=>l.tag===t).length;return {v,n:g.length,nc:c("no_cualifica"),po:c("puede_cualificar"),cu:c("cualifica")}}).sort((a,b)=>b.n-a.n);
+    return `<div class="days"><table><thead><tr><th>${title}</th><th>Total</th><th>no_cualifica</th><th>puede_cualificar</th><th>cualifica</th></tr></thead><tbody>${rows.map(r=>`<tr><td style="text-align:left;white-space:normal">${esc(r.v)}</td><td class="num">${r.n}</td><td class="num">${r.nc||"–"}</td><td class="num">${r.po||"–"}</td><td class="num">${r.cu||"–"}</td></tr>`).join("")}</tbody></table></div>`};
+  document.getElementById("practica").innerHTML=tbl("Modelo de negocio","modelo")+tbl("Nivel de ingresos","ing")+tbl("¿Puede invertir?","inv");
+  // excepciones
+  document.getElementById("excs").innerHTML=EXC.map(x=>{const items=L.filter(l=>l.exc.includes(x.k));return `<details class="exc"><summary><span class="dot" style="background:${x.g===1?"#DC2626":"#B45309"}"></span><span>${esc(x.n)}<div class="d">${esc(x.d)}</div></span><span class="n">${items.length}</span></summary>${items.length?`<div class="days" style="margin:0 14px 12px"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Origen</th><th>Completó el form</th><th>Etiqueta / regla</th><th>Respuestas del form</th><th>Cita</th><th>Slack</th><th>Dónde está</th></tr></thead><tbody>${items.sort((a,b)=>b.at-a.at).map(l=>`<tr><td>${esc(l.name)}</td><td>${esc(l.email||"–")}</td><td>${SRC[l.src]}</td><td>${dtFmt.format(new Date(l.at))}</td><td>${esc(l.tag||(l.passed?"sin etiqueta (en Agendas)":"sin etiqueta"))} / ${esc(l.expected)}</td><td style="font-size:12.5px;color:var(--muted)">${esc([l.modelo,l.ing,l.inv].filter(Boolean).join(" · ")||"–")}</td><td>${l.cita?esc(dtFmt.format(new Date(l.cita.start)))+" · "+esc(l.cita.status||"")+"":"–"}</td><td>${l.slack?"Sí":"No"}</td><td>${esc(l.where)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:0 14px 12px">Ningún caso.</div>`}</details>`}).join("");
+  // histórico
+  const H=L.filter(l=>l.hist.length).sort((a,b)=>b.at-a.at);
+  const hc=k=>H.filter(l=>l.hist.includes(k)).length;
+  document.getElementById("hist").innerHTML=`<details class="exc"><summary><span>${H.length} leads con problemas resueltos<div class="d">${Object.keys(PROB).filter(k=>hc(k)).map(k=>esc(PROB[k])+": "+hc(k)).join(" · ")||"Ninguno todavía"}</div></span><span class="n">${H.length}</span></summary>${H.length?`<div class="days" style="margin:0 14px 12px"><table><thead><tr><th>Nombre</th><th>Origen</th><th>Completó el form</th><th>Problema que tuvo</th><th>Dónde está ahora</th></tr></thead><tbody>${H.map(l=>`<tr><td>${esc(l.name)}</td><td>${SRC[l.src]}</td><td>${dtFmt.format(new Date(l.at))}</td><td>${l.hist.map(k=>esc(PROB[k])).join(" · ")}</td><td>${esc(l.where)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:0 14px 12px">Ninguno todavía.</div>`}</details>`;
+  // tablero
+  document.getElementById("board").innerHTML=COLS.map(c=>{const it=L.filter(l=>l.col===c.k).sort((a,b)=>b.at-a.at);return `<section class="col"><h2><span class="dot" style="background:${c.c}"></span>${c.n}<span class="count num">${it.length}</span></h2><div class="stages">${esc(c.d)}</div>${it.map(l=>`<article class="card" style="--cat:${c.c}"><div class="nm">${esc(l.name)}</div><div class="meta"><span class="tag" style="background:${SRCCOL[l.src]};color:#fff">${SRC[l.src]}</span><span class="tag">${esc(l.where)}</span></div>${l.exc.length?`<div class="warn">${l.exc.map(k=>esc(PROB[k])).join(" · ")}</div>`:""}</article>`).join("")||'<div class="empty">Nadie.</div>'}</section>`}).join("");
 }
-const daysWithData=()=>[...new Set(state.data.map(r=>r.day))].sort();
-function buildSrcChips(){
+
+/* ---------- rango y arranque ---------- */
+function currentRange(){
+  const t=todayKey(); let a,b=t;
+  if(state.preset==="7d") a=addDays(t,-6); else if(state.preset==="custom"){a=state.from;b=state.to} else a=addDays(t,-29);
+  const out=[];let k=a;while(k<=b&&out.length<MAX_DAYS){out.push(k);k=addDays(k,1)}
+  document.getElementById("period").textContent=`Del ${longFmt.format(keyToDate(out[0]))} al ${longFmt.format(keyToDate(out[out.length-1]))}`;
+  return out;
+}
+function init(){
+  const g=document.getElementById("fRange");
+  [["30d","Últimos 30 días"],["7d","Últimos 7 días"],["custom","Elegir fechas"]].forEach(([k,l])=>g.append(chip(l,state.preset===k,()=>{state.preset=k;[...g.children].forEach((c,i)=>c.setAttribute("aria-pressed",["30d","7d","custom"][i]===k));document.getElementById("custom").classList.toggle("hidden",k!=="custom");if(k!=="custom")load()})));
+  const t=todayKey(),f=document.getElementById("dFrom"),to=document.getElementById("dTo"); f.value=addDays(t,-29); to.value=t; f.max=t; to.max=t;
+  document.getElementById("goCustom").addEventListener("click",()=>{let a=f.value,b=to.value;if(!a||!b)return;if(a>b)[a,b]=[b,a];state.from=a;state.to=b;load()});
+  document.getElementById("refresh").addEventListener("click",()=>load(true));
   const fs=document.getElementById("fSrc");
-  fs.append(chip("Todos",true,()=>{state.srcs.clear();render()}));
-  Object.keys(SRC).forEach(k=>{const b=chip(SRC[k],false,()=>{state.srcs.clear();state.srcs.add(k);render()});
-    b.insertAdjacentHTML("afterbegin",`<span class="dot" style="background:${SRCCOL[k]};display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:0"></span>`);fs.append(b)});
-}
-function buildStatic(){
-  buildSrcChips();
-  const fv=document.getElementById("fView");
-  fv.append(chip("Tablero",true,()=>{state.view="board";render()}));
-  fv.append(chip("Lista",false,()=>{state.view="list";render()}));
+  [["all","Todos"],["A","Ads"],["B","Bio"]].forEach(([k,l])=>fs.append(chip(l,k==="all",()=>{state.src=k;render()})));
   document.getElementById("q").addEventListener("input",e=>{state.q=norm(e.target.value);render()});
 }
-function syncChips(){
-  const DAYS=daysWithData(); const fd=[...document.querySelectorAll("#fDay .chip")];
-  if(fd.length){fd[0].setAttribute("aria-pressed",state.days.size===0);fd.slice(1).forEach((b,i)=>b.setAttribute("aria-pressed",state.days.has(DAYS[i])))}
-  const fsc=[...document.querySelectorAll("#fSrc .chip")]; const sk=Object.keys(SRC);
-  if(fsc.length){fsc[0].setAttribute("aria-pressed",state.srcs.size===0);fsc.slice(1).forEach((b,i)=>b.setAttribute("aria-pressed",state.srcs.has(sk[i])))}
-  const fv=[...document.querySelectorAll("#fView .chip")];
-  fv[0].setAttribute("aria-pressed",state.view==="board");fv[1].setAttribute("aria-pressed",state.view==="list");
-}
-const qOk=r=>!state.q||norm(r.name).includes(state.q)||norm(r.email).includes(state.q);
-const dOk=r=>state.days.size===0||state.days.has(r.day);
-function render(){
-  syncChips();
-  const base=state.data.filter(r=>dOk(r)&&qOk(r)&&(state.srcs.size===0||state.srcs.has(r.src)));
-  const rows=base.filter(r=>state.cats.size===0||state.cats.has(r.cat));
-  const cats=CATS.filter(c=>c.k!=="rev"||state.data.some(r=>r.cat==="rev"));
-  const counts=Object.fromEntries(CATS.map(c=>[c.k,base.filter(r=>r.cat===c.k).length]));
-  document.getElementById("tot").textContent=base.length;
-  document.getElementById("totLbl").textContent=base.length===1?"agenda que llegó a Slack":"agendas que llegaron a Slack";
-  drawBar("bar","legend",cats.map(c=>({k:c.k,n:c.n,v:counts[c.k],col:`var(--c-${c.k})`,d:c.d})),state.cats,base.length);
-  const forSrc=state.data.filter(r=>dOk(r)&&qOk(r)&&(state.cats.size===0||state.cats.has(r.cat)));
-  drawBar("barSrc","legendSrc",Object.keys(SRC).map(k=>({k,n:SRC[k],v:forSrc.filter(r=>r.src===k).length,col:SRCCOL[k]})),state.srcs,forSrc.length);
-  const t=document.getElementById("daysTbl"); const DAYS=daysWithData().filter(k=>state.days.size===0||state.days.has(k));
-  let h=`<thead><tr><th>Día</th><th>Agendas</th>${cats.map(c=>`<th>${c.n}</th>`).join("")}</tr></thead><tbody>`;
-  DAYS.forEach(k=>{const rs=base.filter(r=>r.day===k);h+=`<tr><td>${dayLbl(k)}</td><td class="num">${rs.length}</td>${cats.map(c=>`<td class="num">${rs.filter(r=>r.cat===c.k).length||"–"}</td>`).join("")}</tr>`});
-  h+=`</tbody><tfoot><tr><td>Total</td><td class="num">${base.length}</td>${cats.map(c=>`<td class="num">${counts[c.k]}</td>`).join("")}</tr></tfoot>`;t.innerHTML=h;
-  const board=document.getElementById("board"),list=document.getElementById("list");
-  board.style.gridTemplateColumns=`repeat(${cats.filter(c=>!(state.cats.size&&!state.cats.has(c.k))).length},minmax(230px,1fr))`;
-  board.classList.toggle("hidden",state.view!=="board");list.classList.toggle("hidden",state.view!=="list");board.innerHTML="";
-  cats.forEach(c=>{
-    if(state.cats.size&&!state.cats.has(c.k))return;
-    const items=rows.filter(r=>r.cat===c.k);
-    const col=document.createElement("section");col.className="col";col.setAttribute("aria-label",c.n);
-    col.innerHTML=`<h2><span class="dot" style="background:var(--c-${c.k})"></span>${c.n}<span class="count num">${items.length}</span></h2><div class="stages">${c.d}</div>`;
-    if(!items.length)col.insertAdjacentHTML("beforeend",`<div class="empty">Nadie en esta columna con los filtros actuales.</div>`);
-    items.forEach(r=>{const el=document.createElement("article");el.className="card";el.style.setProperty("--cat",`var(--c-${c.k})`);
-      el.innerHTML=`<div class="nm">${esc(r.name)}</div><div class="meta"><span class="tag st" style="background:${r.cat==="rev"?"#4B5563":STAGE_COL(r.stage)}">${esc(r.stage)}</span><span class="tag">${SRC[r.src]}</span></div>${r.why?`<div class="why">${esc(r.why)}</div>`:""}`;col.append(el)});
-    board.append(col);
-  });
-  list.innerHTML=`<table><thead><tr><th>Nombre</th><th>Correo</th><th>Agendó</th><th>Origen</th><th>Etapa</th><th>Estado</th></tr></thead><tbody>${
-    rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.email?esc(r.email):"<span style='color:var(--muted)'>–</span>"}</td><td>${dayLbl(r.day)}</td><td>${SRC[r.src]}</td><td><span class="tag st" style="background:${r.cat==="rev"?"#4B5563":STAGE_COL(r.stage)}">${esc(r.stage)}</span></td><td>${(CATS.find(c=>c.k===r.cat)||{n:r.cat}).n}</td></tr>`).join("")
-  }</tbody></table>${rows.length?"":`<div class="empty" style="padding:16px">No hay agendas con estos filtros.</div>`}`;
-}
-function drawBar(barId,legId,items,sel,total){
-  const bar=document.getElementById(barId);bar.innerHTML="";
-  items.forEach(it=>{if(!it.v)return;const b=document.createElement("button");b.type="button";b.style.flex=it.v;b.style.background=it.col;
-    const pct=Math.round(it.v*100/(total||1));b.textContent=pct>=6?pct+"%":"";b.title=`${it.n}: ${it.v} (${pct}%)`;b.setAttribute("aria-label",b.title);
-    if(sel.size&&!sel.has(it.k))b.style.opacity=.35;b.addEventListener("click",()=>{toggle(sel,it.k);render()});bar.append(b)});
-  const lg=document.getElementById(legId);lg.innerHTML="";
-  items.forEach(it=>{const b=document.createElement("button");b.type="button";b.className="leg"+(sel.size&&!sel.has(it.k)?" off":"");
-    b.innerHTML=`<span class="dot" style="background:${it.col}"></span><span class="n num">${it.v}</span><span class="l">${it.n}</span>`;if(it.d)b.title=it.d;
-    b.addEventListener("click",()=>{toggle(sel,it.k);render()});lg.append(b)});
-}
-
-/* ---------- arranque ---------- */
-let running=false;
-buildRange(); syncRange(); buildStatic(); currentRange(); load();
+init(); load();
 </script>
 </body>
 </html>
