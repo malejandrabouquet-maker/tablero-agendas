@@ -186,7 +186,7 @@ function webinarRow(a, webinarPool, segPool) {
     if (s.startsWith("descualificado")) return row(a, { ...base, stage: "Descualificado por nicho", cat: "pn" });
     if (s.startsWith("new lead")) return row(a, { ...base, stage: "New Lead (webinar)", cat: "sin" });
     if (s.startsWith("pre webinar")) return row(a, { ...base, stage: "Pre webinar", cat: "sin" });
-    if (s.startsWith("vip")) return row(a, { ...base, stage: "VIP (webinar)", cat: "sin" });
+    if (s.startsWith("vip")) return row(a, { ...base, stage: "VIP (webinar)", cat: "abi" }); // ya se está trabajando
     if (s.startsWith("triaje")) return row(a, { ...base, stage: "Triaje confirmado (webinar)", cat: "tri" });
     if (s.startsWith("agendado")) return row(a, { ...base, stage: "Agendado (webinar)", cat: "rev", why: "Figura como Agendado en WEBINAR pero no se encontró su oportunidad en Agendas" });
     return row(a, { ...base, stage: w.opp.stage + " (webinar)", cat: "rev", why: "Etapa del pipeline WEBINAR que el tablero no conoce" });
