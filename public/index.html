@@ -158,6 +158,12 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
     <div id="formBody"></div>
   </section>
 
+  <section class="summary" id="webBox" aria-label="Embudo del webinar">
+    <div class="sub0">Embudo del webinar</div>
+    <div class="snap" style="margin:-4px 0 10px">Leads que entraron al pipeline WEBINAR en el período, según la etapa en la que están hoy. Se lee de GoHighLevel, no de Slack: incluye a los que solo se anotaron.</div>
+    <div id="webBody"></div>
+  </section>
+
   <div class="filters">
     <div class="group" id="fSrc"><span>Origen</span></div>
     <div class="group" id="fDay"><span>Día</span></div>
@@ -170,7 +176,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:76ch}
   <div class="list hidden" id="list"></div>
   </div>
 
-  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar. Las de webinar sin oportunidad en Agendas se buscan en el pipeline WEBINAR y en Seguimientos (descalificados por el form). Quien agendó varias veces se cuenta una sola vez. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
+  <footer>Solo cuenta las agendas que llegan al canal #comercial-agenda; el día es el de la notificación. Origen según el calendario: "Sesión Asesoría Founders" es Ads, "Founders IG" o "Founders S" es Bio, "Auditoría Founders" es Webinar (llamada VIP). Las de webinar sin oportunidad en Agendas se buscan en el pipeline WEBINAR y en Seguimientos (descalificados por el form). Quien agendó varias veces se cuenta una sola vez. La etapa sale del pipeline Agendas de GHL, hasta Nutrición - confirmación; las que ya pasaron a los closers cuentan como confirmadas. "Para revisar" son agendas que no se encontraron en GHL o cuyo único match es una oportunidad vieja que no se tocó desde que agendó.</footer>
 </div>
 
 <script>
@@ -263,7 +269,7 @@ async function load(fresh){
     let j={}; try{j=await r.json()}catch(e){}
     if(r.status===401){setPass("");running=false;document.getElementById("refresh").disabled=false;askPass("Contraseña incorrecta.");return}
     if(!r.ok) throw new Error(j.message||("Error "+r.status));
-    state.data=(j.rows||[]).map((x,idx)=>({...x,idx})); state.form=j.form||null;
+    state.data=(j.rows||[]).map((x,idx)=>({...x,idx})); state.form=j.form||null; state.webinar=j.webinar||null;
     if(!state.data.length){
       document.getElementById("content").classList.add("hidden");
       setStatus(`<b>No hay agendas en este período.</b>No llegó ninguna notificación a #comercial-agenda entre el ${longFmt.format(keyToDate(range[0]))} y el ${longFmt.format(keyToDate(range[range.length-1]))}.`);
@@ -346,6 +352,7 @@ const qOk=r=>!state.q||norm(r.name).includes(state.q)||norm(r.email).includes(st
 const dOk=r=>state.days.size===0||state.days.has(r.day);
 function render(){
   renderForm();
+  renderWebinar();
   syncChips();
   const base=state.data.filter(r=>dOk(r)&&qOk(r)&&(state.srcs.size===0||state.srcs.has(r.src)));
   const rows=base.filter(r=>state.cats.size===0||state.cats.has(r.cat));
@@ -376,6 +383,17 @@ function render(){
   list.innerHTML=`<table><thead><tr><th>Nombre</th><th>Correo</th><th>Agendó</th><th>Origen</th><th>Etapa</th><th>Estado</th></tr></thead><tbody>${
     rows.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.email?esc(r.email):"<span style='color:var(--muted)'>–</span>"}</td><td>${dayLbl(r.day)}</td><td>${SRC[r.src]}</td><td><span class="tag st" style="background:${r.cat==="rev"?"#4B5563":STAGE_COL(r.stage)}">${esc(r.stage)}</span></td><td>${(CATS.find(c=>c.k===r.cat)||{n:r.cat}).n}</td></tr>`).join("")
   }</tbody></table>${rows.length?"":`<div class="empty" style="padding:16px">No hay agendas con estos filtros.</div>`}`;
+}
+function renderWebinar(){
+  const box=document.getElementById("webBox"), el=document.getElementById("webBody"), w=state.webinar;
+  // Solo tiene sentido con "Todos" o "Webinar".
+  box.classList.toggle("hidden", state.srcs.size>0&&!state.srcs.has("W"));
+  if(!w){el.innerHTML=`<div class="empty">Sin datos del pipeline WEBINAR.</div>`;return}
+  if(!w.ok){el.innerHTML=`<div class="why" style="font-size:13.5px">${esc(w.message||"No se pudo leer el pipeline WEBINAR.")}</div>`;return}
+  const pct=v=>w.total?Math.round(v*100/w.total)+"%":"–";
+  const items=[["Entraron al webinar",w.total,"",""],["Pre webinar",w.pre,"Solo se anotaron","#94A3B8"],["New Lead",w.nuevo,"Entraron y todavía no se movieron","#6B7280"],["VIP",w.vip,"Agendaron la llamada VIP, en evaluación","#9333EA"],["Triaje confirmado",w.tri,"Pasaron a triaje","#6366F1"],["Llamada agendada",w.ag,"Etapa Agendado: siguen en el pipeline Agendas","#16A34A"],["No cualificaron",w.nq,"Low ticket, datos erróneos o descalificados por nicho","#B45309"]];
+  if(w.otros) items.push(["Otras etapas",w.otros,Object.entries(w.otrasEtapas||{}).map(([k,v])=>k+": "+v).join(" · "),"#4B5563"]);
+  el.innerHTML=`<div class="legend" style="margin-top:0;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">${items.map(([n,v,d,c],i)=>`<div class="leg" style="cursor:default;align-items:flex-start" title="${esc(d)}">${c?`<span class="dot" style="background:${c};margin-top:6px"></span>`:""}<span><span class="n num">${v}</span> <span class="l" style="display:block">${esc(n)}${i?` · ${pct(v)}`:""}</span>${d?`<span class="l" style="display:block;font-size:12px">${esc(d)}</span>`:""}</span></div>`).join("")}</div>`;
 }
 function renderForm(){
   const el=document.getElementById("formBody"); const f=state.form;
