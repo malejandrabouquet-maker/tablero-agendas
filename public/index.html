@@ -209,7 +209,7 @@ const STAGE_COL = n => {
 const CATS = [
   {k:"form",n:"Descalificados por el form",d:"Webinar: no pasaron el filtro del form (Seguimientos) o recibieron low ticket"},
   {k:"sin",n:"Sin trabajar",d:"Nuevo Lead, Confirmar nicho"},
-  {k:"abi",n:"Abiertas",d:"Conversando, Formulario enviado, No responde, Interesados sin dinero"},
+  {k:"abi",n:"Abiertas",d:"Conversando, Formulario enviado, No responde, Interesados sin dinero, VIP (webinar)"},
   {k:"tri",n:"Triaje",d:"Antes de definir si pasan a llamada"},
   {k:"con",n:"Confirmadas",d:"Nutrición - confirmación (y las que ya pasaron a los closers)"},
   {k:"pn",n:"Descalificadas por nicho",d:"Descualificado por nicho"},
@@ -391,7 +391,7 @@ function renderWebinar(){
   if(!w){el.innerHTML=`<div class="empty">Sin datos del pipeline WEBINAR.</div>`;return}
   if(!w.ok){el.innerHTML=`<div class="why" style="font-size:13.5px">${esc(w.message||"No se pudo leer el pipeline WEBINAR.")}</div>`;return}
   const pct=v=>w.total?Math.round(v*100/w.total)+"%":"–";
-  const items=[["Entraron al webinar",w.total,"",""],["Pre webinar",w.pre,"Solo se anotaron","#94A3B8"],["New Lead",w.nuevo,"Entraron y todavía no se movieron","#6B7280"],["VIP",w.vip,"Agendaron la llamada VIP, en evaluación","#9333EA"],["Triaje confirmado",w.tri,"Pasaron a triaje","#6366F1"],["Llamada agendada",w.ag,"Etapa Agendado: siguen en el pipeline Agendas","#16A34A"],["No cualificaron",w.nq,"Low ticket, datos erróneos o descalificados por nicho","#B45309"]];
+  const items=[["Entraron al webinar",w.total,"",""],["Pre webinar",w.pre,"Solo se anotaron","#94A3B8"],["New Lead",w.nuevo,"Entraron y todavía no se movieron","#6B7280"],["VIP",w.vip,"Agendaron la llamada VIP y se están trabajando","#9333EA"],["Triaje confirmado",w.tri,"Pasaron a triaje","#6366F1"],["Llamada agendada",w.ag,"Etapa Agendado: siguen en el pipeline Agendas","#16A34A"],["No cualificaron",w.nq,"Low ticket, datos erróneos o descalificados por nicho","#B45309"]];
   if(w.otros) items.push(["Otras etapas",w.otros,Object.entries(w.otrasEtapas||{}).map(([k,v])=>k+": "+v).join(" · "),"#4B5563"]);
   el.innerHTML=`<div class="legend" style="margin-top:0;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">${items.map(([n,v,d,c],i)=>`<div class="leg" style="cursor:default;align-items:flex-start" title="${esc(d)}">${c?`<span class="dot" style="background:${c};margin-top:6px"></span>`:""}<span><span class="n num">${v}</span> <span class="l" style="display:block">${esc(n)}${i?` · ${pct(v)}`:""}</span>${d?`<span class="l" style="display:block;font-size:12px">${esc(d)}</span>`:""}</span></div>`).join("")}</div>`;
 }
