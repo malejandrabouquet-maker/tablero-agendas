@@ -10,6 +10,7 @@ const GHL_LOCATION = env("GHL_LOCATION", "x7nYndpXUc1dmpunATsZ");
 const GHL_PIPELINE = env("GHL_PIPELINE", "Hdnl2Kgw5kRk1rCNrwYW");          // Agendas
 const GHL_PIPE_WEBINAR = env("GHL_PIPE_WEBINAR", "kY28NRmKxkvrkAUm1tOq"); // WEBINAR
 const GHL_PIPE_SEG = env("GHL_PIPE_SEG", "5pgmx29qxGQt7GpypecG");         // Seguimientos
+const GHL_FORM_ID = env("GHL_FORM_ID", "YoRCF4a7VxC843laia8r");          // Form "Datos Cita VSL - Founders"
 const PASSWORD = env("DASHBOARD_PASSWORD");
 const MAX_DAYS = 31;
 const DAY = 864e5;
@@ -116,6 +117,7 @@ function slim(o, stages) {
     name: o.name || "",
     contact: o.contact?.name || "",
     email: o.contact?.email || "",
+    contactId: o.contactId || o.contact?.id || "",
     tags: (o.contact?.tags || []).map((x) => norm(x)),
     pipeline: o.pipelineId || "",
     stage: stages[o.pipelineStageId] || "Sin etapa",
@@ -178,11 +180,14 @@ const row = (a, extra) => ({ name: a.name, src: a.src, day: a.day, time: a.time,
 function webinarRow(a, webinarPool, segPool) {
   const w = pick(a, webinarPool.filter((o) => matches(a.name, o)));
   if (w && !w.why) {
-    const s = norm(w.opp.stage), base = { email: w.opp.email };
+    const s = norm(w.opp.stage), base = { email: w.opp.email, cid: w.opp.contactId };
     if (s.startsWith("low ticket")) return row(a, { ...base, stage: "Low ticket", cat: "form" });
     if (s.startsWith("datos erroneos")) return row(a, { ...base, stage: "Datos erróneos", cat: "de" });
     if (s.startsWith("descualificado")) return row(a, { ...base, stage: "Descualificado por nicho", cat: "pn" });
     if (s.startsWith("new lead")) return row(a, { ...base, stage: "New Lead (webinar)", cat: "sin" });
+    if (s.startsWith("pre webinar")) return row(a, { ...base, stage: "Pre webinar", cat: "sin" });
+    if (s.startsWith("vip")) return row(a, { ...base, stage: "VIP (webinar)", cat: "sin" });
+    if (s.startsWith("triaje")) return row(a, { ...base, stage: "Triaje confirmado (webinar)", cat: "tri" });
     if (s.startsWith("agendado")) return row(a, { ...base, stage: "Agendado (webinar)", cat: "rev", why: "Figura como Agendado en WEBINAR pero no se encontró su oportunidad en Agendas" });
     return row(a, { ...base, stage: w.opp.stage + " (webinar)", cat: "rev", why: "Etapa del pipeline WEBINAR que el tablero no conoce" });
   }
@@ -190,8 +195,8 @@ function webinarRow(a, webinarPool, segPool) {
   if (g && !g.why) {
     const s = norm(g.opp.stage);
     if (s.includes("perdido") || s.includes("descualificado") || g.opp.tags.some((x) => x.includes("descualificado webinar")))
-      return row(a, { email: g.opp.email, stage: "Descalificado por el form", cat: "form" });
-    return row(a, { email: g.opp.email, stage: g.opp.stage + " (Seguimientos)", cat: "rev", why: "Está en Seguimientos en una etapa que no es de descalificados" });
+      return row(a, { email: g.opp.email, cid: g.opp.contactId, stage: "Descalificado por el form", cat: "form" });
+    return row(a, { email: g.opp.email, cid: g.opp.contactId, stage: g.opp.stage + " (Seguimientos)", cat: "rev", why: "Está en Seguimientos en una etapa que no es de descalificados" });
   }
   return row(a, { stage: "No encontrada en GHL", cat: "rev", why: "No está en Agendas, WEBINAR ni Seguimientos" });
 }
@@ -199,13 +204,13 @@ function webinarRow(a, webinarPool, segPool) {
 async function build(from, to) {
   const [rawAgendas, stages] = await Promise.all([slackAgendas(from, to), stageMap()]);
   const agendas = dedupe(rawAgendas);
-  if (!agendas.length) return [];
+  if (!agendas.length) return { rows: [], webinarPool: null, stages };
   const since = dayStart(from) - 3 * DAY;
   const hasWeb = agendas.some((a) => a.src === "W");
   // Cada pipeline completo, de una vez (evita cientos de búsquedas sueltas).
   const [pool, webinarPool, segPool] = await Promise.all([
     searchOpps(stages, { sinceMs: since }),
-    hasWeb ? searchOpps(stages, { sinceMs: since, pipelineId: GHL_PIPE_WEBINAR }) : [],
+    searchOpps(stages, { sinceMs: since, pipelineId: GHL_PIPE_WEBINAR, max: 3000 }),
     hasWeb ? searchOpps(stages, { sinceMs: since, pipelineId: GHL_PIPE_SEG, max: 3000 }) : [],
   ]);
   // Búsqueda individual por apellido solo para Ads/Bio que no aparecieron (máximo 20).
@@ -217,46 +222,34 @@ async function build(from, to) {
     batch.forEach((b) => extra.push(...b));
   }
   const all = [...pool, ...extra];
-  return agendas.map((a) => {
+  const rows = agendas.map((a) => {
     const p = pick(a, all.filter((o) => matches(a.name, o)));
-    if (p && !p.why) { const stage = p.opp.stage.replace(/\s*\|S$/, ""); return row(a, { email: p.opp.email, stage, cat: stageCat(stage) }); }
+    if (p && !p.why) { const stage = p.opp.stage.replace(/\s*\|S$/, ""); return row(a, { email: p.opp.email, cid: p.opp.contactId, stage, cat: stageCat(stage) }); }
     if (a.src === "W") return webinarRow(a, webinarPool, segPool);
-    if (p) { const stage = p.opp.stage.replace(/\s*\|S$/, ""); return row(a, { email: p.opp.email, stage, cat: "rev", why: p.why }); }
+    if (p) { const stage = p.opp.stage.replace(/\s*\|S$/, ""); return row(a, { email: p.opp.email, cid: p.opp.contactId, stage, cat: "rev", why: p.why }); }
     return row(a, { stage: "No encontrada en GHL", cat: "rev", why: "No hay ninguna oportunidad en Agendas con ese nombre" });
   });
+  return { rows, webinarPool, stages };
 }
 
-export default async (req) => {
-  if (!SLACK_TOKEN || !GHL_TOKEN || !PASSWORD) return json(500, { error: "config", message: "Faltan variables de entorno en Netlify (SLACK_TOKEN, GHL_TOKEN o DASHBOARD_PASSWORD)." });
-  if (!passOk(req.headers.get("x-pass"))) return json(401, { error: "auth", message: "Contraseña incorrecta." });
-  const url = new URL(req.url);
-  let from = url.searchParams.get("from"), to = url.searchParams.get("to");
-  if (!isDay(from) || !isDay(to)) return json(400, { error: "range", message: "Fechas inválidas." });
-  if (from > to) [from, to] = [to, from];
-  if ((dayStart(to) - dayStart(from)) / DAY + 1 > MAX_DAYS) from = dayKey(dayStart(to) - (MAX_DAYS - 1) * DAY + 12 * 3600e3);
-  const key = from + "|" + to;
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.at < CACHE_MS && !url.searchParams.has("fresh")) return json(200, { from, to, updatedAt: hit.at, rows: hit.rows });
-  try {
-    const rows = await build(from, to);
-    const at = Date.now();
-    cache.set(key, { at, rows });
-    return json(200, { from, to, updatedAt: at, rows });
-  } catch (e) {
-    const where = e?.where || "server";
-    const msgs = {
-      not_in_channel: "La app de Slack no está en #comercial-agenda. Invitala al canal.",
-      channel_not_found: "La app de Slack no ve el canal. Invitala a #comercial-agenda.",
-      missing_scope: "Al token de Slack le falta el permiso groups:history.",
-      invalid_auth: "El token de Slack es inválido.",
-      token_revoked: "El token de Slack fue revocado.",
-      http_401: "El token de GoHighLevel es inválido o venció.",
-      http_403: "Al token de GoHighLevel le faltan permisos (ver oportunidades).",
-      http_429: "GoHighLevel recibió demasiadas consultas juntas. Esperá un minuto y tocá Actualizar.",
-      pipeline_not_found: "No se encontró el pipeline Agendas en GoHighLevel.",
-    };
-    return json(502, { error: where, code: e?.code, message: msgs[e?.code] || `Falló ${where === "slack" ? "Slack" : where === "ghl" ? "GoHighLevel" : "el servidor"} (${e?.code || e?.message || "error"}).` });
+/* ---------- embudo del webinar (lee el pipeline WEBINAR, no Slack) ---------- */
+// Oportunidades que entraron a WEBINAR en el período, agrupadas por la etapa en la que están hoy.
+function webinarFunnel(pool, from, to) {
+  const start = dayStart(from), end = dayStart(to) + DAY;
+  const ops = (pool || []).filter((o) => o.created >= start && o.created < end);
+  const g = { pre: 0, nuevo: 0, vip: 0, tri: 0, ag: 0, nq: 0, otros: 0 }, otros = {};
+  for (const o of ops) {
+    const s = norm(o.stage);
+    if (s.startsWith("pre webinar")) g.pre++;
+    else if (s.startsWith("new lead")) g.nuevo++;
+    else if (s.startsWith("vip")) g.vip++;
+    else if (s.startsWith("triaje")) g.tri++;
+    else if (s.startsWith("agendado")) g.ag++;
+    else if (s.startsWith("low ticket") || s.startsWith("datos erroneos") || s.startsWith("descualificado")) g.nq++;
+    else { g.otros++; otros[o.stage] = (otros[o.stage] || 0) + 1; }
   }
-};
+  return { ok: true, total: ops.length, ...g, otrasEtapas: otros };
+}
 
-export const config = { path: "/api/agendas" };
+/* ---------- formulario "Datos Cita VSL - Founders" ---------- */
+// Trae
