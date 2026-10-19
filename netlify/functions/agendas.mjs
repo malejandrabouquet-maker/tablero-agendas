@@ -252,4 +252,78 @@ function webinarFunnel(pool, from, to) {
 }
 
 /* ---------- formulario "Datos Cita VSL - Founders" ---------- */
-// Trae
+// Trae las respuestas del período y devuelve las de quienes no tienen agenda en Slack.
+async function formSubmissions(from, to) {
+  const out = [];
+  for (let page = 1; page <= 30; page++) {
+    const j = await ghl("/forms/submissions", { locationId: GHL_LOCATION, formId: GHL_FORM_ID, startAt: from, endAt: to, limit: 100, page });
+    const items = j.submissions || [];
+    for (const s of items) {
+      const o = s.others || {};
+      const name = s.name || o.full_name || [o.first_name, o.last_name].filter(Boolean).join(" ") || "";
+      const ms = Date.parse(s.createdAt || o.submissionDate || 0) || 0;
+      out.push({ name: name.replace(/\s+/g, " ").trim(), email: (s.email || o.email || "").trim(), cid: s.contactId || o.contactId || "", ms });
+    }
+    if (items.length < 100 || !j.meta?.nextPage) break;
+  }
+  return out;
+}
+function formOnly(subs, rows) {
+  const emails = new Set(rows.map((r) => norm(r.email)).filter(Boolean));
+  const cids = new Set(rows.map((r) => r.cid).filter(Boolean));
+  const seen = new Set(), total = new Set(), pending = [];
+  for (const s of subs.sort((a, b) => b.ms - a.ms)) {
+    const k = s.cid || norm(s.email) || norm(s.name);
+    if (!k) continue;
+    total.add(k);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const booked = (s.cid && cids.has(s.cid)) || (s.email && emails.has(norm(s.email))) || rows.some((r) => s.name && matches(s.name, { contact: r.name, name: "" }));
+    if (!booked) pending.push({ name: s.name || "(sin nombre)", email: s.email, day: dayKey(s.ms), time: hhmm(s.ms) });
+  }
+  return { total: total.size, pending };
+}
+
+export default async (req) => {
+  if (!SLACK_TOKEN || !GHL_TOKEN || !PASSWORD) return json(500, { error: "config", message: "Faltan variables de entorno en Netlify (SLACK_TOKEN, GHL_TOKEN o DASHBOARD_PASSWORD)." });
+  if (!passOk(req.headers.get("x-pass"))) return json(401, { error: "auth", message: "Contraseña incorrecta." });
+  const url = new URL(req.url);
+  let from = url.searchParams.get("from"), to = url.searchParams.get("to");
+  if (!isDay(from) || !isDay(to)) return json(400, { error: "range", message: "Fechas inválidas." });
+  if (from > to) [from, to] = [to, from];
+  if ((dayStart(to) - dayStart(from)) / DAY + 1 > MAX_DAYS) from = dayKey(dayStart(to) - (MAX_DAYS - 1) * DAY + 12 * 3600e3);
+  const key = from + "|" + to;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS && !url.searchParams.has("fresh")) return json(200, { from, to, updatedAt: hit.at, rows: hit.rows, form: hit.form, webinar: hit.webinar });
+  try {
+    const built = await build(from, to);
+    const rows = built.rows;
+    // El embudo del webinar tampoco frena el tablero.
+    let webinar;
+    try { webinar = webinarFunnel(built.webinarPool || await searchOpps(built.stages, { sinceMs: dayStart(from) - 3 * DAY, pipelineId: GHL_PIPE_WEBINAR, max: 3000 }), from, to); }
+    catch (e) { webinar = { ok: false, message: `No se pudo leer el pipeline WEBINAR (${e?.code || "error"}).` }; }
+    // El formulario no frena el tablero: si falla, se muestra el aviso y el resto sigue.
+    let form;
+    try { const f = formOnly(await formSubmissions(from, to), rows); form = { ok: true, ...f }; }
+    catch (e) { form = { ok: false, message: e?.code === "http_401" || e?.code === "http_403" ? "La llave de GoHighLevel no tiene permiso para ver formularios (forms.readonly)." : `No se pudo leer el formulario (${e?.code || "error"}).` }; }
+    const at = Date.now();
+    cache.set(key, { at, rows, form, webinar });
+    return json(200, { from, to, updatedAt: at, rows, form, webinar });
+  } catch (e) {
+    const where = e?.where || "server";
+    const msgs = {
+      not_in_channel: "La app de Slack no está en #comercial-agenda. Invitala al canal.",
+      channel_not_found: "La app de Slack no ve el canal. Invitala a #comercial-agenda.",
+      missing_scope: "Al token de Slack le falta el permiso groups:history.",
+      invalid_auth: "El token de Slack es inválido.",
+      token_revoked: "El token de Slack fue revocado.",
+      http_401: "El token de GoHighLevel es inválido o venció.",
+      http_403: "Al token de GoHighLevel le faltan permisos (ver oportunidades).",
+      http_429: "GoHighLevel recibió demasiadas consultas juntas. Esperá un minuto y tocá Actualizar.",
+      pipeline_not_found: "No se encontró el pipeline Agendas en GoHighLevel.",
+    };
+    return json(502, { error: where, code: e?.code, message: msgs[e?.code] || `Falló ${where === "slack" ? "Slack" : where === "ghl" ? "GoHighLevel" : "el servidor"} (${e?.code || e?.message || "error"}).` });
+  }
+};
+
+export const config = { path: "/api/agendas" };
